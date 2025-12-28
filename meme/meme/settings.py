@@ -5,7 +5,7 @@ Ready for Render.com deployment with PostgreSQL.
 from pathlib import Path
 import os
 from urllib.parse import urlparse
-
+from csp.constants import SELF
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -33,12 +33,16 @@ SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
 
 # Content Security Policy
-CSP_DEFAULT_SRC = ("'self'",)
-CSP_SCRIPT_SRC = ("'self'",)
-CSP_IMG_SRC = ("'self'", "data:", "https:")
-CSP_OBJECT_SRC = ("'none'",)
-CSP_BASE_URI = ("'self'",)
-CSP_FRAME_ANCESTORS = ("'none'",)
+CONTENT_SECURITY_POLICY = {
+    "DIRECTIVES": {
+        "default-src": [SELF],
+        "script-src": [SELF],
+        "img-src": [SELF, "data:", "https:"],
+        "object-src": ["'none'"],
+        "base-uri": [SELF],
+        "frame-ancestors": ["'none'"],
+    }
+}
 
 # Application definition
 INSTALLED_APPS = [
