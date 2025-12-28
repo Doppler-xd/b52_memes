@@ -1,6 +1,6 @@
 #!/bin/bash
 # build.sh — выполняется при каждом деплое на Render
-
+set -e
 echo "Устанавливаем зависимости..."
 pip install -r requirements.txt
 
