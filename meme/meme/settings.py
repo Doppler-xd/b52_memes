@@ -5,7 +5,7 @@ Ready for Render.com deployment with PostgreSQL.
 from pathlib import Path
 import os
 from urllib.parse import urlparse
-from csp.constants import SELF
+from csp.constants import SELF, NONCE
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -36,12 +36,15 @@ X_FRAME_OPTIONS = 'DENY'
 CONTENT_SECURITY_POLICY = {
     "DIRECTIVES": {
         "default-src": [SELF],
-        "script-src": [SELF],
-        "img-src": [SELF, "data:", "https:"],
+        "script-src": [SELF, "'unsafe-inline'"],  # ← Разрешаем inline-скрипты (часто нужны для Django)
+        "style-src": [SELF, "'unsafe-inline'"],   # ← Разрешаем inline-стили (обязательно для CSS!)
+        "img-src": [SELF, "data:", "https:"],     # ← Разрешаем data: и https:// для изображений
         "object-src": ["'none'"],
         "base-uri": [SELF],
         "frame-ancestors": ["'none'"],
-    }
+        "connect-src": [SELF, "https:"],           # ← Для AJAX-запросов (если есть)
+    },
+    "REPORT_ONLY": False,  # ← Отключаем режим только отчетов
 }
 
 # Application definition
