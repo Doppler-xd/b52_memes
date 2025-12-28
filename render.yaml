@@ -1,0 +1,27 @@
+# render.yaml — кладётся в корень репозитория
+
+version: 1
+
+services:
+  - type: web
+    name: meme-coursework
+    runtime: python
+    region: frankfurt          # или oregon, если ближе к тебе
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn meme.wsgi:application"
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DJANGO_SETTINGS_MODULE
+        value: "meme.settings"
+    healthCheckPath: "/"
+
+databases:
+  - name: meme-db
+    databaseName: meme_db
+    user: meme_user
