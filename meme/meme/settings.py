@@ -1,11 +1,12 @@
 """
 Django settings for meme project.
-Ready for Render.com deployment with PostgreSQL.
+Ready for Render.com deployment with PostgreSQL, CSP, CORS, and WhiteNoise.
 """
 from pathlib import Path
 import os
 from urllib.parse import urlparse
-from csp.constants import SELF, NONCE
+from csp.constants import SELF
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -32,19 +33,31 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
 
-# Content Security Policy
+# === CORS (для AJAX-запросов) ===
+CORS_ALLOWED_ORIGINS = [
+    f"https://{host.strip()}" for host in ALLOWED_HOSTS
+    if host.strip() and not host.strip().startswith('.')
+] + ["https://meme-coursework.onrender.com"]  # fallback
+
+# Удалим лишнее, если DEBUG=True — можно разрешить всё локально
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+
+# === Content Security Policy (CSP) — django-csp 4.0+ ===
 CONTENT_SECURITY_POLICY = {
     "DIRECTIVES": {
         "default-src": [SELF],
-        "script-src": [SELF, "'unsafe-inline'"],  # ← Разрешаем inline-скрипты (часто нужны для Django)
-        "style-src": [SELF, "'unsafe-inline'"],   # ← Разрешаем inline-стили (обязательно для CSS!)
-        "img-src": [SELF, "data:", "https:"],     # ← Разрешаем data: и https:// для изображений
+        "script-src": [SELF, "'unsafe-inline'", "'unsafe-eval'"],
+        "style-src": [SELF, "'unsafe-inline'"],
+        "img-src": [SELF, "data:", "https:"],
         "object-src": ["'none'"],
         "base-uri": [SELF],
         "frame-ancestors": ["'none'"],
-        "connect-src": [SELF, "https:"],           # ← Для AJAX-запросов (если есть)
+        "connect-src": [SELF, "https:"],
     },
-    "REPORT_ONLY": False,  # ← Отключаем режим только отчетов
+    "REPORT_ONLY": False,
 }
 
 # Application definition
@@ -57,12 +70,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'memes.apps.MemesConfig',
     'csp',
+    'corsheaders',  # ← добавлено
 ]
 
 # Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # ← for static files on Render
+    'corsheaders.middleware.CorsMiddleware',   # ← ДО CommonMiddleware
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'csp.middleware.CSPMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -91,11 +106,9 @@ TEMPLATES = [
 ]
 
 # Database
-# Render provides DATABASE_URL automatically
 DATABASE_URL = os.getenv('DATABASE_URL')
 if DATABASE_URL:
-    # Fix for Render's postgres:// vs psycopg2's postgresql://
-    DATABASE_URL = DATABASE_CFG = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
     url = urlparse(DATABASE_URL)
     DATABASES = {
         'default': {
@@ -108,7 +121,6 @@ if DATABASE_URL:
         }
     }
 else:
-    # Fallback to SQLite for local development
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',

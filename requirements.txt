@@ -6,3 +6,4 @@ django-cleanup>=7.0
 django-csp>=4.0
 gunicorn>=22.0
 whitenoise>=6.0
+django-cors-headers>=4.0
