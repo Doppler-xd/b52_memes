@@ -838,14 +838,14 @@
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {% for template_item in templates %}
                 <a href="{% url 'memes:editor_with_template' template_item.id %}"
-                   class="template-card border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                    <img src="{{ template_item.image.url }}"
+                    class="template-card border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                    <img src="{% static 'meme_templates/' %}{{ template_item.image_name }}"
                          alt="{{ template_item.name }}"
                          class="w-full h-32 object-cover">
                     <div class="p-3 bg-gray-50">
                         <h3 class="font-medium text-gray-800">{{ template_item.name }}</h3>
                         {% if template_item.category %}
-                        <span class="text-xs text-gray-500 mt-1">{{ template_item.get_category_display }}</span>
+                        <span class="text-xs text-gray-500 mt-1">{{ template_item.category.name }}</span>
                         {% endif %}
                     </div>
                 </a>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <h1 class="text-3xl font-bold mb-8">Галерея шаблонов</h1>
@@ -33,8 +34,10 @@
     <div id="templates-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {% for template in templates %}
         <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-            <img src="{{ template.image.url }}" alt="{{ template.name }}"
-                 class="w-full h-48 object-cover">
+            <img src="{% static 'meme_templates/' %}{{ template.image_name }}" 
+                 alt="{{ template.name }}"
+                 class="w-full h-48 object-cover"
+                 onerror="this.onerror=null; this.src='{% static 'back.jpg' %}';">
             <div class="p-4">
                 <h3 class="font-bold text-lg mb-2">{{ template.name }}</h3>
                 <p class="text-gray-600 text-sm mb-4">
@@ -56,48 +59,37 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Элементы DOM
     const categorySelect = document.getElementById('category');
     const searchInput = document.getElementById('search');
     const searchBtn = document.getElementById('search-btn');
     const templatesContainer = document.getElementById('templates-container');
     
-    // Установить начальную категорию из Django context
     {% if selected_category %}
         categorySelect.value = '{{ selected_category }}';
     {% endif %}
-    
-    // Установить начальный поисковый запрос
     {% if search_query %}
         searchInput.value = '{{ search_query }}';
     {% endif %}
     
-    // Обработчики событий
     searchBtn.addEventListener('click', loadTemplates);
     categorySelect.addEventListener('change', loadTemplates);
     
-    // Поиск при нажатии Enter
     searchInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             loadTemplates();
         }
     });
     
-    // Дебаунс для поиска при вводе текста
     let searchTimeout;
     searchInput.addEventListener('input', function() {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(loadTemplates, 500);
     });
     
-    // Функция загрузки шаблонов
     async function loadTemplates() {
         const category = categorySelect.value;
         const search = searchInput.value;
         
-        console.log('Loading templates with category:', category, 'search:', search);
-        
-        // Показать индикатор загрузки
         templatesContainer.innerHTML = `
             <div class="col-span-full text-center py-12">
                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -106,14 +98,12 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         try {
-            // Формируем URL с параметрами
             const params = new URLSearchParams();
             params.append('category', category);
             if (search) {
                 params.append('q', search);
             }
             
-            // Отправляем запрос к API
             const response = await fetch(`/memes/api/templates/?${params.toString()}`);
             
             if (!response.ok) {
@@ -121,7 +111,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             const data = await response.json();
-            console.log('API response:', data);
             
             if (data.success) {
                 renderTemplates(data.templates);
@@ -148,7 +137,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Функция отображения шаблонов
     function renderTemplates(templates) {
         if (!templates || templates.length === 0) {
             templatesContainer.innerHTML = `
@@ -173,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <img src="${template.image_url}" 
                          alt="${template.name}"
                          class="w-full h-48 object-cover"
-                         onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200?text=Нет+изображения'">
+                         onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200?text=Нет+изображения';">
                     <div class="p-4">
                         <h3 class="font-bold text-lg mb-2 truncate" title="${template.name}">${template.name}</h3>
                         <p class="text-gray-600 text-sm mb-4">
@@ -190,26 +178,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         templatesContainer.innerHTML = html;
         
-        // Добавляем анимацию появления
         const items = templatesContainer.querySelectorAll('.fade-in');
         items.forEach((item, index) => {
             item.style.animationDelay = `${index * 0.05}s`;
         });
     }
     
-    // Функция сброса фильтров
     window.resetFilters = function() {
         categorySelect.value = 'all';
         searchInput.value = '';
         loadTemplates();
     }
     
-    // Загрузить шаблоны при первой загрузке страницы (если есть параметры фильтрации)
     {% if selected_category != 'all' or search_query %}
         loadTemplates();
-        console.log('Category value:', category);
-        console.log('Search value:', search);
-        console.log('API URL:', `/memes/api/templates/?category=${category}&q=${search}`);
     {% endif %}
 });
 </script>

@@ -33,7 +33,7 @@
             <div class="template-card bg-white rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:-translate-y-2">
                 <div class="relative h-48 overflow-hidden">
                     <img
-                        src="{{ template.image.url }}"
+                        src="{% static 'meme_templates/' %}{{ template.image_name }}"
                         alt="{{ template.name }}"
                         class="w-full h-full object-cover"
                     >

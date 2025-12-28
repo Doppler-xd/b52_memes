@@ -14,6 +14,10 @@ from django.contrib import messages
 import base64
 import time
 from django.core.files.base import ContentFile
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+
 
 def home(request):
     """Главная страница"""
@@ -85,7 +89,6 @@ def save_meme_image(request):
                     'error': 'Нет данных изображения'
                 }, status=400)
 
-            # Декодирование base64 изображения
             format, imgstr = image_data.split(';base64,')
             ext = format.split('/')[-1]
             image_file = ContentFile(
@@ -93,7 +96,6 @@ def save_meme_image(request):
                 name=f'meme_{request.user.id}_{int(time.time())}.{ext}'
             )
 
-            # Сохранение мема в базу
             meme = Mem.objects.create(
                 user=request.user,
                 name=f"Мем #{meme.id}",
@@ -137,11 +139,9 @@ def edit_profile(request):
                            'Имя пользователя может содержать только буквы, цифры, пробелы, точки, дефисы и подчёркивания.')
             return render(request, 'memes/edit_profile.html', {'user': request.user})
 
-        # Защита от XSS при отображении (defence-in-depth)
         user.username = escape(raw_username)[:30]
         user.email = request.POST.get('email', user.email)
 
-        # Получаем или создаем профиль
         profile, created = Profile.objects.get_or_create(user=user)
 
         if 'avatar' in request.FILES:
@@ -192,24 +192,16 @@ def profile_page(request):
     mems = Mem.objects.filter(user=request.user)
     return render(request, 'memes/profile.html', {
         'mems': mems,
-        'user': request.user  # передаем user в контекст
+        'user': request.user
     })
-
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
 
 
 @csrf_exempt
 def get_template_api(request):
-    """API для получения списка шаблонов"""
+    """API для получения списка шаблонов (из статики)"""
     try:
-        # Получаем параметры из запроса
         category_id = request.GET.get('category', 'all')
         query = request.GET.get('q', '')
-
-        print(f"API called with category: {category_id}, query: {query}")  # Для отладки
 
         templates = Sample.objects.select_related('category').all()
 
@@ -217,69 +209,58 @@ def get_template_api(request):
             try:
                 category_id_int = int(category_id)
                 templates = templates.filter(category_id=category_id_int)
-                print(f"Filtering by category: {category_id_int}")  # Для отладки
-            except (ValueError, TypeError) as e:
-                print(f"Error parsing category_id: {e}")  # Для отладки
+            except (ValueError, TypeError):
                 pass
 
         if query:
             templates = templates.filter(name__icontains=query)
-            print(f"Filtering by query: {query}")  # Для отладки
 
-        # Преобразуем в JSON-совместимый формат
         templates_data = []
         for template in templates:
+            # Формируем путь к изображению в static/meme_templates/
+            image_url = f"/static/meme_templates/{template.image_name}"
             templates_data.append({
                 'id': template.id,
                 'name': template.name,
                 'category_name': template.category.name if template.category else 'Без категории',
-                'image_url': request.build_absolute_uri(template.image.url) if template.image else '',
+                'image_url': image_url,
                 'editor_url': f'/memes/editor/{template.id}/'
             })
 
-        categories_data = []
-        for category in Category.objects.all():
-            categories_data.append({
-                'id': category.id,
-                'name': category.name
-            })
+        categories_data = [
+            {'id': cat.id, 'name': cat.name}
+            for cat in Category.objects.all()
+        ]
 
-        response_data = {
+        return JsonResponse({
             'success': True,
             'templates': templates_data,
             'categories': categories_data,
             'selected_category': category_id,
             'search_query': query,
             'count': len(templates_data)
-        }
-
-        print(f"API response: {response_data['count']} templates found")  # Для отладки
-
-        return JsonResponse(response_data, safe=False)
+        })
 
     except Exception as e:
-        print(f"API error: {e}")  # Для отладки
         return JsonResponse({
             'success': False,
             'error': str(e)
         }, status=500)
 
+
 @csrf_exempt
 def get_template_detail_api(request, template_id):
-    """API для получения информации о шаблоне по ID"""
+    """API для получения информации о шаблоне по ID (из статики)"""
     try:
         template = get_object_or_404(Sample, id=template_id)
 
-        if not template.image:
-            return JsonResponse({
-                'error': 'Изображение шаблона не найдено'
-            }, status=404)
+        image_url = f"/static/meme_templates/{template.image_name}"
 
         return JsonResponse({
             'id': template.id,
-            'name': escape(template.name),  # 🔒 экранируем!
+            'name': escape(template.name),
             'category': escape(template.category.name) if template.category else None,
-            'image_url': request.build_absolute_uri(template.image.url),
+            'image_url': image_url,
             'created_at': template.created_at.strftime('%Y-%m-%d %H:%M:%S')
         })
 
