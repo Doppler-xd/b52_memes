@@ -42,7 +42,7 @@
                 <div class="p-4">
                     <h3 class="font-bold text-lg text-gray-800 mb-2">{{ template.name }}</h3>
                     <div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-600">{{ template.category.name }}</span>
+                        <span class="text-sm text-gray-600">{{ template.category }}</span>
                         <a
                             href="{% url 'memes:editor_with_template' template.id %}"
                             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors"

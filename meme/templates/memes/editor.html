@@ -844,9 +844,7 @@
                          class="w-full h-32 object-cover">
                     <div class="p-3 bg-gray-50">
                         <h3 class="font-medium text-gray-800">{{ template_item.name }}</h3>
-                        {% if template_item.category %}
-                        <span class="text-xs text-gray-500 mt-1">{{ template_item.category.name }}</span>
-                        {% endif %}
+                        <span class="text-xs text-gray-500 mt-1">{{ template_item.category }}</span>
                     </div>
                 </a>
                 {% endfor %}

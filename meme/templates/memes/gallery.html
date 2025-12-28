@@ -12,7 +12,7 @@
                 <select id="category" class="w-full p-2 border border-gray-300 rounded">
                     <option value="all">Все категории</option>
                     {% for cat in categories %}
-                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    <option value="{{ cat }}">{{ cat }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -41,7 +41,7 @@
             <div class="p-4">
                 <h3 class="font-bold text-lg mb-2">{{ template.name }}</h3>
                 <p class="text-gray-600 text-sm mb-4">
-                    Категория: {{ template.category.name }}
+                    Категория: {{ template.category }}
                 </p>
                 <a href="{% url 'memes:editor_with_template' template.id %}"
                    class="block bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded text-sm">

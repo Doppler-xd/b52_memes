@@ -6,7 +6,7 @@ from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 from django import forms
 from django.contrib.auth.models import User
-from .models import Sample, Mem, Category, Profile
+from .models import Mem, Profile
 from django.db import OperationalError
 import re
 from django.utils.html import escape
@@ -19,9 +19,18 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 
 
+# === СТАТИЧНЫЕ ШАБЛОНЫ МЕМОВ ===
+STATIC_TEMPLATES = [
+    {"id": 1, "name": "Арнольд", "category": "Кино", "image_name": "arnold.jpg"},
+    {"id": 2, "name": "Элайн", "category": "Сериалы", "image_name": "elaine.jpg"},
+    {"id": 3, "name": "Дурачок", "category": "Мемы", "image_name": "dumbass.jpg"},
+    # ДОБАВЬ СВОИ ФАЙЛЫ ЗДЕСЬ → точно как в static/meme_templates/
+]
+
+
 def home(request):
     """Главная страница"""
-    popular_templates = Sample.objects.all()[:8]
+    popular_templates = STATIC_TEMPLATES[:8]
     return render(request, 'memes/home.html', {
         'popular_templates': popular_templates,
     })
@@ -39,13 +48,13 @@ def template_gallery(request):
     category_id = request.GET.get('category', 'all')
     query = request.GET.get('q', '')
 
-    templates = Sample.objects.all()
+    templates = STATIC_TEMPLATES
     if category_id != 'all':
-        templates = templates.filter(category_id=category_id)
+        templates = [t for t in templates if t['category'] == category_id]
     if query:
-        templates = templates.filter(name__icontains=query)
+        templates = [t for t in templates if query.lower() in t['name'].lower()]
 
-    categories = Category.objects.all()
+    categories = sorted(set(t['category'] for t in STATIC_TEMPLATES))
     return render(request, 'memes/gallery.html', {
         'templates': templates,
         'categories': categories,
@@ -60,14 +69,9 @@ class MemeEditorView(View):
 
     def get(self, request, template_id=None):
         template = None
-        templates = []
-
-        try:
-            templates = Sample.objects.all()[:8]
-            if template_id:
-                template = get_object_or_404(Sample, id=template_id)
-        except OperationalError as e:
-            print(f"Database error: {e}")
+        templates = STATIC_TEMPLATES[:8]
+        if template_id:
+            template = next((t for t in STATIC_TEMPLATES if t['id'] == template_id), None)
 
         return render(request, 'memes/editor.html', {
             'template': template,
@@ -98,7 +102,7 @@ def save_meme_image(request):
 
             meme = Mem.objects.create(
                 user=request.user,
-                name=f"Мем #{meme.id}",
+                name=f"Мем #{Mem.objects.count() + 1}",
                 custom_image=image_file,
                 is_public=False
             )
@@ -199,72 +203,48 @@ def profile_page(request):
 @csrf_exempt
 def get_template_api(request):
     """API для получения списка шаблонов (из статики)"""
-    try:
-        category_id = request.GET.get('category', 'all')
-        query = request.GET.get('q', '')
+    category_id = request.GET.get('category', 'all')
+    query = request.GET.get('q', '')
 
-        templates = Sample.objects.select_related('category').all()
+    templates = STATIC_TEMPLATES
+    if category_id != 'all':
+        templates = [t for t in templates if t['category'] == category_id]
+    if query:
+        templates = [t for t in templates if query.lower() in t['name'].lower()]
 
-        if category_id != 'all':
-            try:
-                category_id_int = int(category_id)
-                templates = templates.filter(category_id=category_id_int)
-            except (ValueError, TypeError):
-                pass
-
-        if query:
-            templates = templates.filter(name__icontains=query)
-
-        templates_data = []
-        for template in templates:
-            # Формируем путь к изображению в static/meme_templates/
-            image_url = f"/static/meme_templates/{template.image_name}"
-            templates_data.append({
-                'id': template.id,
-                'name': template.name,
-                'category_name': template.category.name if template.category else 'Без категории',
-                'image_url': image_url,
-                'editor_url': f'/memes/editor/{template.id}/'
-            })
-
-        categories_data = [
-            {'id': cat.id, 'name': cat.name}
-            for cat in Category.objects.all()
-        ]
-
-        return JsonResponse({
-            'success': True,
-            'templates': templates_data,
-            'categories': categories_data,
-            'selected_category': category_id,
-            'search_query': query,
-            'count': len(templates_data)
+    templates_data = []
+    for t in templates:
+        templates_data.append({
+            'id': t['id'],
+            'name': t['name'],
+            'category_name': t['category'],
+            'image_url': f"/static/meme_templates/{t['image_name']}",
+            'editor_url': f'/memes/editor/{t["id"]}/'
         })
 
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+    categories_data = [{"id": cat, "name": cat} for cat in sorted(set(t['category'] for t in STATIC_TEMPLATES))]
+
+    return JsonResponse({
+        'success': True,
+        'templates': templates_data,
+        'categories': categories_data,
+        'selected_category': category_id,
+        'search_query': query,
+        'count': len(templates_data)
+    })
 
 
 @csrf_exempt
 def get_template_detail_api(request, template_id):
     """API для получения информации о шаблоне по ID (из статики)"""
-    try:
-        template = get_object_or_404(Sample, id=template_id)
+    template = next((t for t in STATIC_TEMPLATES if t['id'] == template_id), None)
+    if not template:
+        return JsonResponse({'error': 'Шаблон не найден'}, status=404)
 
-        image_url = f"/static/meme_templates/{template.image_name}"
-
-        return JsonResponse({
-            'id': template.id,
-            'name': escape(template.name),
-            'category': escape(template.category.name) if template.category else None,
-            'image_url': image_url,
-            'created_at': template.created_at.strftime('%Y-%m-%d %H:%M:%S')
-        })
-
-    except Exception as e:
-        return JsonResponse({
-            'error': str(e)
-        }, status=500)
+    return JsonResponse({
+        'id': template['id'],
+        'name': escape(template['name']),
+        'category': template['category'],
+        'image_url': f"/static/meme_templates/{template['image_name']}",
+        'created_at': '2025-01-01 00:00:00'
+    })
