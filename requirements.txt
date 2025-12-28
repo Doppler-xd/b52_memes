@@ -4,3 +4,5 @@ Pillow>=10.0
 python-dotenv>=1.0
 django-cleanup>=7.0
 django-csp>4.0
+gunicorn>=22.0
+whitenoise>=6.0
