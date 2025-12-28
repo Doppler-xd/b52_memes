@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8">Мои мемы</h1>
+
+    {% if mems %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for meme in mems %}
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            {% if meme.sample %}
+                <img src="{{ meme.sample.image.url }}" alt="{{ meme.name }}"
+                     class="w-full h-48 object-cover">
+            {% elif meme.custom_image %}
+                <img src="{{ meme.custom_image.url }}" alt="{{ meme.name }}"
+                     class="w-full h-48 object-cover">
+            {% endif %}
+            <div class="p-4">
+                <h3 class="font-bold text-lg mb-2">{{ meme.name }}</h3>
+                <p class="text-gray-600 text-sm mb-4">
+                    Создан: {{ meme.created_at|date:"d.m.Y H:i" }}
+                </p>
+                <div class="flex gap-2">
+                    {% if meme.sample %}
+                    <a href="{% url 'memes:editor_with_template' meme.sample.id %}"
+                       class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded text-sm">
+                        Редактировать
+                    </a>
+                    {% endif %}
+                    <form method="POST" action="{% url 'memes:delete_meme' meme.id %}"
+                          onsubmit="return confirm('Удалить этот мем?')">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded text-sm">
+                            Удалить
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <p class="text-gray-500 text-lg mb-4">У вас пока нет созданных мемов.</p>
+        <a href="{% url 'memes:gallery' %}"
+           class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg">
+            Создать первый мем
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

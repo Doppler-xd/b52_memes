@@ -1,0 +1,1514 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Редактор мемов - B52_memes{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Общие стили */
+    .editor-page {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+
+    /* Шапка редактора */
+    .editor-header {
+        position: sticky;
+        top: 0;
+        z-index: 0;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .header-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 16px 20px;
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+    }
+
+    /* Кнопка назад */
+    .back-button {
+        color: #4a5568;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        transition: color 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .back-button:hover {
+        color: #4299e1;
+    }
+
+    .back-icon {
+        padding: 6px;
+        border-radius: 8px;
+        background: #f7fafc;
+        transition: background 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .back-button:hover .back-icon {
+        background: #edf2f7;
+    }
+
+    /* Заголовок */
+    .editor-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2d3748;
+        text-align: center;
+        flex-grow: 1;
+    }
+
+    /* Индикатор шаблона */
+    .template-indicator {
+        color: #718096;
+        font-size: 16px;
+        font-weight: 500;
+        flex-shrink: 0;
+        text-align: right;
+        min-width: 120px;
+    }
+
+    /* Контент */
+    .editor-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px 20px;
+    }
+
+    /* Стили для редактора мемов */
+    .meme-editor-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .editor-toolbar {
+        display: flex;
+        gap: 12px;
+        padding: 20px;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .editor-tool {
+        padding: 12px 20px;
+        background: white;
+        border: 1px solid #cbd5e0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 500;
+        font-size: 16px;
+    }
+
+    .editor-tool:hover {
+        background: #edf2f7;
+        border-color: #a0aec0;
+    }
+
+    /* Кнопка "Сохранить мем" - СИНЯЯ */
+    .save-button {
+        background: #3b82f6 !important;
+        color: white !important;
+        border-color: #3b82f6 !important;
+        font-weight: 600;
+    }
+
+    .save-button:hover {
+        background: #2563eb !important;
+        border-color: #2563eb !important;
+    }
+
+    .canvas-container {
+        padding: 40px;
+        display: flex;
+        justify-content: center;
+        background: #f1f5f9;
+        min-height: 600px;
+        position: relative;
+    }
+
+    /* Контейнер для канваса */
+    .canvas-wrapper {
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    #meme-canvas {
+        width: 800px !important;
+        height: 600px !important;
+        background: white;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-radius: 8px;
+        cursor: move;
+    }
+
+    /* Панель редактирования текста */
+    .text-editor-panel {
+        position: absolute;
+        top: 40px;
+        right: 40px;
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        z-index: 100;
+        width: 350px;
+        display: none;
+        border: 1px solid #e2e8f0;
+    }
+
+    .text-editor-panel.active {
+        display: block;
+    }
+
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .panel-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #2d3748;
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #718096;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+    }
+
+    .close-btn:hover {
+        background: #f7fafc;
+        color: #4a5568;
+    }
+
+    .text-input-group {
+        margin-bottom: 20px;
+    }
+
+    .text-input-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #4a5568;
+        font-size: 14px;
+    }
+
+    .text-input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #cbd5e0;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.2s;
+    }
+
+    .text-input:focus {
+        outline: none;
+        border-color: #4299e1;
+        box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+    }
+
+    /* Стили для ползунка размера текста */
+    .font-size-slider-container {
+        margin-bottom: 20px;
+    }
+
+    .font-size-slider-container label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #4a5568;
+        font-size: 14px;
+    }
+
+    .font-size-slider-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .font-size-slider {
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+        background: #e2e8f0;
+        outline: none;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    .font-size-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #4299e1;
+        cursor: pointer;
+        border: 3px solid white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .font-size-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #4299e1;
+        cursor: pointer;
+        border: 3px solid white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .font-size-value {
+        min-width: 40px;
+        text-align: center;
+        font-weight: 600;
+        color: #4299e1;
+        font-size: 16px;
+    }
+
+    .font-selector {
+        margin-bottom: 20px;
+    }
+
+    .font-selector label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #4a5568;
+        font-size: 14px;
+    }
+
+    .font-dropdown {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #cbd5e0;
+        border-radius: 8px;
+        font-size: 16px;
+        background: white;
+        cursor: pointer;
+    }
+
+    .font-dropdown:focus {
+        outline: none;
+        border-color: #4299e1;
+    }
+
+    .text-position-selector {
+        margin-bottom: 20px;
+    }
+
+    .text-position-selector label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #4a5568;
+        font-size: 14px;
+    }
+
+    .position-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 8px;
+    }
+
+    .position-btn {
+        padding: 10px;
+        border: 1px solid #cbd5e0;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 14px;
+        text-align: center;
+        font-weight: 500;
+    }
+
+    .position-btn:hover {
+        background: #f7fafc;
+        border-color: #a0aec0;
+    }
+
+    .position-btn.active {
+        background: #4299e1;
+        color: white;
+        border-color: #4299e1;
+    }
+
+    .color-picker {
+        margin-bottom: 20px;
+    }
+
+    .color-picker label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #4a5568;
+        font-size: 14px;
+    }
+
+    .color-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+    }
+
+    .color-option {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .color-option:hover {
+        transform: scale(1.1);
+    }
+
+    .color-option.active {
+        border-color: #4299e1;
+        transform: scale(1.05);
+    }
+
+    .editor-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .action-btn {
+        flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 16px;
+        transition: background-color 0.2s;
+    }
+
+    .save-text-btn {
+        background: #48bb78;
+        color: white;
+    }
+
+    .save-text-btn:hover {
+        background: #38a169;
+    }
+
+    .delete-text-btn {
+        background: #f56565;
+        color: white;
+    }
+
+    .delete-text-btn:hover {
+        background: #e53e3e;
+    }
+
+    .new-text-btn {
+        background: #4299e1;
+        color: white;
+    }
+
+    .new-text-btn:hover {
+        background: #3182ce;
+    }
+
+    /* Список текстов */
+    .texts-list-panel {
+        position: absolute;
+        bottom: 40px;
+        right: 40px;
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        z-index: 99;
+        width: 300px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .texts-list-header {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: #2d3748;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .text-item {
+        padding: 10px 12px;
+        margin-bottom: 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #f7fafc;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .text-item:hover {
+        background: #edf2f7;
+        border-color: #cbd5e0;
+    }
+
+    .text-item.active {
+        background: #bee3f8;
+        border-color: #4299e1;
+    }
+
+    .text-item-content {
+        font-size: 14px;
+        color: #2d3748;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+    }
+
+    .text-item-actions {
+        display: flex;
+        gap: 6px;
+    }
+
+    .text-action-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #718096;
+        padding: 4px 6px;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .text-action-btn:hover {
+        background: #e2e8f0;
+        color: #4a5568;
+    }
+
+    /* Подсказка при добавлении текста */
+    .add-text-hint {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.85);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        font-size: 18px;
+        display: none;
+        z-index: 90;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    /* Шаблоны мемов */
+    .templates-section {
+        margin-top: 40px;
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+    }
+
+    .templates-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2d3748;
+        margin-bottom: 8px;
+    }
+
+    .templates-subtitle {
+        color: #718096;
+        font-size: 16px;
+        margin-bottom: 24px;
+    }
+
+    .templates-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+    }
+
+    .template-card {
+        border-radius: 8px;
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+        cursor: pointer;
+        border: 1px solid #e2e8f0;
+        background: white;
+    }
+
+    .template-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .template-card img {
+        width: 100%;
+        height: 160px;
+        object-fit: cover;
+        display: block;
+    }
+
+    .template-info {
+        padding: 16px;
+    }
+
+    .template-name {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 4px;
+    }
+
+    .template-category {
+        font-size: 14px;
+        color: #718096;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="editor-page">
+    <!-- Шапка редактора -->
+    <header class="editor-header">
+        <div class="header-container">
+            <div class="header-content">
+                <!-- Кнопка назад -->
+                <a href="{% url 'memes:gallery' %}" class="back-button">
+                    <div class="back-icon">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                    </div>
+                    <span>Главная страница</span>
+                </a>
+
+                <!-- Заголовок -->
+                <h1 class="editor-title">Редактор мемов</h1>
+
+                <!-- Индикатор шаблона -->
+                <div class="template-indicator">
+                    {% if template %}
+                        Шаблон #{{ template.id }}
+                    {% else %}
+                        Новый мем
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Основной контент -->
+    <div class="editor-content">
+        <div class="meme-editor-container">
+            <!-- Панель инструментов -->
+            <div class="editor-toolbar">
+                <button class="editor-tool" onclick="openTextEditor()">
+                    ✏️ Добавить/редактировать текст
+                </button>
+                <button class="editor-tool" onclick="uploadImage()">
+                    📁 Загрузить изображение
+                </button>
+                <button class="editor-tool save-button" onclick="saveMeme()">
+                    💾 Сохранить мем
+                </button>
+            </div>
+
+            <!-- Холст для мема -->
+            <div class="canvas-container">
+                <div class="canvas-wrapper">
+                    <canvas id="meme-canvas" width="800" height="600"></canvas>
+
+                    <!-- Подсказка при добавлении текста -->
+                    <div class="add-text-hint" id="add-text-hint">
+                        Нажмите на холст, чтобы добавить текст в это место
+                    </div>
+
+                    <!-- Скрытый input для загрузки изображения -->
+                    <input type="file" id="image-input" accept="image/*" style="display: none;">
+                </div>
+
+                <!-- Панель редактирования текста -->
+                <div class="text-editor-panel" id="text-editor-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">Редактирование текста</div>
+                        <button class="close-btn" onclick="closeTextEditor()">×</button>
+                    </div>
+
+                    <div class="text-input-group">
+                        <label for="text-content">Текст:</label>
+                        <input type="text" id="text-content" class="text-input" placeholder="Введите текст мема" maxlength="100">
+                    </div>
+
+                    <!-- Ползунок размера текста -->
+                    <div class="font-size-slider-container">
+                        <label>Размер текста: <span id="font-size-value">36px</span></label>
+                        <div class="font-size-slider-wrapper">
+                            <input type="range"
+                                   min="20"
+                                   max="72"
+                                   value="36"
+                                   class="font-size-slider"
+                                   id="font-size-slider"
+                                   oninput="updateFontSizeValue(this.value)">
+                        </div>
+                    </div>
+
+                    <div class="font-selector">
+                        <label for="font-select">Шрифт:</label>
+                        <select id="font-select" class="font-dropdown">
+                            <option value="Impact">Impact</option>
+                            <option value="Arial">Arial</option>
+                            <option value="Comic Sans MS">Comic Sans MS</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Verdana">Verdana</option>
+                            <option value="Courier New">Courier New</option>
+                        </select>
+                    </div>
+
+                    <div class="text-position-selector">
+                        <label>Позиция текста:</label>
+                        <div class="position-grid" id="position-selector">
+                            <button class="position-btn" data-position="top">Верх</button>
+                            <button class="position-btn" data-position="center">Центр</button>
+                            <button class="position-btn" data-position="bottom">Низ</button>
+                            <button class="position-btn active" data-position="custom">Свой</button>
+                        </div>
+                    </div>
+
+                    <div class="color-picker">
+                        <label>Цвет текста:</label>
+                        <div class="color-grid" id="text-color-picker">
+                            <div class="color-option active" style="background: #FFFFFF;" data-color="#FFFFFF" title="Белый"></div>
+                            <div class="color-option" style="background: #000000;" data-color="#000000" title="Черный"></div>
+                            <div class="color-option" style="background: #FF0000;" data-color="#FF0000" title="Красный"></div>
+                            <div class="color-option" style="background: #00FF00;" data-color="#00FF00" title="Зеленый"></div>
+                            <div class="color-option" style="background: #0000FF;" data-color="#0000FF" title="Синий"></div>
+                            <div class="color-option" style="background: #FFFF00;" data-color="#FFFF00" title="Желтый"></div>
+                            <div class="color-option" style="background: #FF00FF;" data-color="#FF00FF" title="Пурпурный"></div>
+                            <div class="color-option" style="background: #00FFFF;" data-color="#00FFFF" title="Бирюзовый"></div>
+                            <div class="color-option" style="background: #FFA500;" data-color="#FFA500" title="Оранжевый"></div>
+                            <div class="color-option" style="background: #800080;" data-color="#800080" title="Фиолетовый"></div>
+                        </div>
+                    </div>
+
+                    <div class="color-picker">
+                        <label>Цвет обводки:</label>
+                        <div class="color-grid" id="stroke-color-picker">
+                            <div class="color-option" style="background: #000000;" data-color="#000000" title="Черный"></div>
+                            <div class="color-option active" style="background: #FFFFFF;" data-color="#FFFFFF" title="Белый"></div>
+                            <div class="color-option" style="background: #FF0000;" data-color="#FF0000" title="Красный"></div>
+                            <div class="color-option" style="background: #0000FF;" data-color="#0000FF" title="Синий"></div>
+                            <div class="color-option" style="background: #FFFF00;" data-color="#FFFF00" title="Желтый"></div>
+                        </div>
+                    </div>
+
+                    <div class="editor-actions">
+                        <button class="action-btn save-text-btn" onclick="saveText()">
+                            Сохранить
+                        </button>
+                        <button class="action-btn delete-text-btn" onclick="deleteText()">
+                            Удалить
+                        </button>
+                        <button class="action-btn new-text-btn" onclick="addNewText()">
+                            Новый текст
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Панель списка текстов -->
+                <div class="texts-list-panel" id="texts-list-panel">
+                    <div class="texts-list-header">
+                        <span>Тексты (<span id="texts-count">0</span>)</span>
+                        <button class="text-action-btn" onclick="toggleTextsList()">×</button>
+                    </div>
+                    <div id="texts-list">
+                        <!-- Список текстов будет заполняться JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Шаблоны мемов (если есть) -->
+        {% if templates %}
+        <div class="templates-section">
+            <h2 class="templates-title">Использовать шаблон</h2>
+            <p class="templates-subtitle">Выберите готовый шаблон или загрузите свое изображение</p>
+            <div class="templates-grid">
+                {% for template_item in templates %}
+                <a href="{% url 'memes:editor_template' template_item.id %}"
+                   class="template-card">
+                    <img src="{{ template_item.image.url }}"
+                         alt="{{ template_item.name }}"
+                         loading="lazy">
+                    <div class="template-info">
+                        <h3 class="template-name">{{ template_item.name }}</h3>
+                        {% if template_item.category %}
+                        <div class="template-category">{{ template_item.get_category_display }}</div>
+                        {% endif %}
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Инициализация переменных
+    const canvas = document.getElementById('meme-canvas');
+    const ctx = canvas.getContext('2d');
+    let memeData = {
+        texts: [],
+        images: [],
+        template: null,
+        currentTextIndex: -1,
+        editingMode: false
+    };
+
+    // Элементы интерфейса
+    const textEditorPanel = document.getElementById('text-editor-panel');
+    const textsListPanel = document.getElementById('texts-list-panel');
+    const textsList = document.getElementById('texts-list');
+    const textContentInput = document.getElementById('text-content');
+    const fontSelect = document.getElementById('font-select');
+    const fontSizeSlider = document.getElementById('font-size-slider');
+    const fontSizeValue = document.getElementById('font-size-value');
+    const textsCount = document.getElementById('texts-count');
+    const positionSelector = document.getElementById('position-selector');
+    const textColorPicker = document.getElementById('text-color-picker');
+    const strokeColorPicker = document.getElementById('stroke-color-picker');
+    const addTextHint = document.getElementById('add-text-hint');
+
+    // Предопределенные позиции текста
+    const textPositions = {
+        'top': { x: 0.5, y: 0.1, align: 'center' },
+        'center': { x: 0.5, y: 0.5, align: 'center' },
+        'bottom': { x: 0.5, y: 0.9, align: 'center' },
+        'custom': { x: 0.5, y: 0.5, align: 'center' }
+    };
+
+    // Текущий размер шрифта
+    let currentFontSize = 36;
+
+    // Инициализация редактора
+    function initializeEditor() {
+        {% if template %}
+            loadTemplate({{ template.id }});
+        {% else %}
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#718096';
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Загрузите изображение или выберите шаблон',
+                        canvas.width / 2,
+                        canvas.height / 2);
+        {% endif %}
+
+        // Инициализация выбора цвета
+        initColorPickers();
+        initPositionSelector();
+        initFontSizeSlider();
+
+        // Инициализация обработчиков событий
+        initEventListeners();
+
+        // Обновляем счетчик текстов
+        updateTextsCount();
+    }
+
+    // Инициализация выбора цвета
+    function initColorPickers() {
+        // Выбор цвета текста
+        textColorPicker.querySelectorAll('.color-option').forEach(option => {
+            option.addEventListener('click', function() {
+                textColorPicker.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Выбор цвета обводки
+        strokeColorPicker.querySelectorAll('.color-option').forEach(option => {
+            option.addEventListener('click', function() {
+                strokeColorPicker.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    }
+
+    // Инициализация выбора позиции
+    function initPositionSelector() {
+        positionSelector.querySelectorAll('.position-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                positionSelector.querySelectorAll('.position-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    }
+
+    // Инициализация ползунка размера шрифта
+    function initFontSizeSlider() {
+        fontSizeSlider.addEventListener('input', function() {
+            updateFontSizeValue(this.value);
+        });
+    }
+
+    // Обновление значения размера шрифта
+    function updateFontSizeValue(value) {
+        currentFontSize = parseInt(value);
+        fontSizeValue.textContent = value + 'px';
+
+        // Обновляем размер шрифта для выбранного текста
+        if (memeData.editingMode && memeData.currentTextIndex >= 0) {
+            memeData.texts[memeData.currentTextIndex].fontSize = currentFontSize;
+            redrawCanvas();
+        }
+    }
+
+    // Инициализация обработчиков событий
+    function initEventListeners() {
+        // Обработчик загрузки изображения
+        document.getElementById('image-input').addEventListener('change', handleImageUpload);
+
+        // Обработчик клавиши Escape для закрытия панелей
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeTextEditor();
+                hideAddTextHint();
+            }
+        });
+
+        // Обработчик клика вне панелей
+        document.addEventListener('click', function(e) {
+            if (!textEditorPanel.contains(e.target) && !textsListPanel.contains(e.target) &&
+                !e.target.closest('.editor-tool') && e.target !== canvas) {
+                if (textEditorPanel.classList.contains('active')) {
+                    closeTextEditor();
+                }
+            }
+        });
+    }
+
+    // Загрузка шаблона
+    function loadTemplate(templateId) {
+        fetch(`/api/template/${templateId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Шаблон не найден');
+                }
+                return response.json();
+            })
+            .then(template => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = function() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    memeData.template = template;
+                    memeData.images = [{
+                        src: template.image_url,
+                        type: 'template'
+                    }];
+
+                    addDefaultTexts();
+                    updateTextsList();
+                };
+                img.onerror = function() {
+                    console.error('Ошибка загрузки изображения');
+                    showError('Ошибка загрузки шаблона');
+                };
+                img.src = template.image_url;
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки шаблона:', error);
+                showError('Ошибка загрузки шаблона: ' + error.message);
+            });
+    }
+
+    // Показать ошибку
+    function showError(message) {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#f56565';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+    }
+
+    // Добавление дефолтных текстов
+    function addDefaultTexts() {
+        addTextWithData('Верхний текст', 0.5, 0.1, 'center', 36);
+        addTextWithData('Нижний текст', 0.5, 0.9, 'center', 36);
+    }
+
+    // Открытие редактора текста
+    function openTextEditor() {
+        textEditorPanel.classList.add('active');
+        textsListPanel.style.display = 'block';
+
+        if (memeData.currentTextIndex >= 0 && memeData.texts[memeData.currentTextIndex]) {
+            // Режим редактирования существующего текста
+            memeData.editingMode = true;
+            const text = memeData.texts[memeData.currentTextIndex];
+            textContentInput.value = text.text;
+            fontSelect.value = text.fontFamily;
+            fontSizeSlider.value = text.fontSize;
+            updateFontSizeValue(text.fontSize);
+
+            // Установка активного цвета текста
+            textColorPicker.querySelectorAll('.color-option').forEach(option => {
+                option.classList.toggle('active', option.dataset.color === text.color);
+            });
+
+            // Установка активного цвета обводки
+            strokeColorPicker.querySelectorAll('.color-option').forEach(option => {
+                option.classList.toggle('active', option.dataset.color === text.strokeColor);
+            });
+
+            // Установка позиции на кастомную
+            positionSelector.querySelectorAll('.position-btn').forEach(btn => {
+                if (btn.dataset.position === 'custom') {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        } else {
+            // Режим добавления нового текста
+            memeData.editingMode = false;
+            textContentInput.value = '';
+            textContentInput.placeholder = 'Введите текст мема';
+            fontSizeSlider.value = currentFontSize;
+            updateFontSizeValue(currentFontSize);
+
+            // Сброс выбора позиции на "Свой"
+            positionSelector.querySelectorAll('.position-btn').forEach(btn => {
+                if (btn.dataset.position === 'custom') {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            // Показать подсказку
+            showAddTextHint();
+        }
+
+        textContentInput.focus();
+    }
+
+    // Закрытие редактора текста
+    function closeTextEditor() {
+        textEditorPanel.classList.remove('active');
+        hideAddTextHint();
+        memeData.currentTextIndex = -1;
+        redrawCanvas();
+    }
+
+    // Показать подсказку
+    function showAddTextHint() {
+        addTextHint.style.display = 'block';
+    }
+
+    // Скрыть подсказку
+    function hideAddTextHint() {
+        addTextHint.style.display = 'none';
+    }
+
+    // Добавление нового текста
+    function addNewText() {
+        memeData.editingMode = false;
+        memeData.currentTextIndex = -1;
+        textContentInput.value = '';
+        textContentInput.focus();
+        showAddTextHint();
+    }
+
+    // Сохранение текста
+    function saveText() {
+        const text = textContentInput.value.trim();
+        if (!text) {
+            alert('Введите текст!');
+            return;
+        }
+
+        // Получаем выбранную позицию
+        const positionBtn = positionSelector.querySelector('.position-btn.active');
+        const positionType = positionBtn.dataset.position;
+        let position = textPositions[positionType];
+
+        // Получаем выбранные цвета
+        const textColor = textColorPicker.querySelector('.color-option.active').dataset.color;
+        const strokeColor = strokeColorPicker.querySelector('.color-option.active').dataset.color;
+        const fontFamily = fontSelect.value;
+
+        if (memeData.editingMode && memeData.currentTextIndex >= 0) {
+            // Редактирование существующего текста
+            const textObj = memeData.texts[memeData.currentTextIndex];
+            textObj.text = text;
+            textObj.color = textColor;
+            textObj.strokeColor = strokeColor;
+            textObj.fontFamily = fontFamily;
+            textObj.fontSize = currentFontSize;
+            textObj.align = position.align;
+
+            // Обновляем позицию, только если выбрана не кастомная
+            if (positionType !== 'custom') {
+                textObj.x = position.x;
+                textObj.y = position.y;
+            }
+        } else {
+            // Добавление нового текста
+            // Если выбран кастомный режим, ждем клика на холсте
+            if (positionType === 'custom') {
+                showAddTextHint();
+                return; // Позиция будет установлена при клике на холст
+            }
+
+            addTextWithData(text, position.x, position.y, position.align, currentFontSize, textColor, strokeColor, fontFamily);
+        }
+
+        redrawCanvas();
+        updateTextsList();
+        closeTextEditor();
+    }
+
+    // Добавление текста с данными
+    function addTextWithData(text, x, y, align = 'center', fontSize = 36, color = '#FFFFFF', strokeColor = '#000000', fontFamily = 'Impact') {
+        memeData.texts.push({
+            text: text,
+            x: x,
+            y: y,
+            fontSize: fontSize,
+            fontFamily: fontFamily,
+            color: color,
+            strokeColor: strokeColor,
+            strokeWidth: 3,
+            align: align,
+            font: fontSize + 'px ' + fontFamily
+        });
+
+        memeData.currentTextIndex = memeData.texts.length - 1;
+        memeData.editingMode = true;
+
+        redrawCanvas();
+        updateTextsList();
+        updateTextsCount();
+    }
+
+    // Удаление текста
+    function deleteText() {
+        if (memeData.currentTextIndex >= 0 && memeData.texts[memeData.currentTextIndex]) {
+            if (confirm('Удалить этот текст?')) {
+                memeData.texts.splice(memeData.currentTextIndex, 1);
+                memeData.currentTextIndex = -1;
+                redrawCanvas();
+                updateTextsList();
+                updateTextsCount();
+                closeTextEditor();
+            }
+        } else {
+            alert('Выберите текст для удаления!');
+        }
+    }
+
+    // Обработка загрузки изображения
+    function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Проверка типа файла
+        if (!file.type.match('image.*')) {
+            alert('Пожалуйста, выберите изображение');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                memeData.images = [{
+                    src: e.target.result,
+                    type: 'uploaded'
+                }];
+
+                memeData.template = null;
+                memeData.texts = [];
+                memeData.currentTextIndex = -1;
+
+                updateTextsList();
+                updateTextsCount();
+                closeTextEditor();
+            };
+            img.onerror = function() {
+                alert('Ошибка загрузки изображения');
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = function() {
+            alert('Ошибка чтения файла');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Перерисовка холста
+    function redrawCanvas() {
+        // Очищаем холст
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Если есть изображение, отрисовываем его
+        if (memeData.images.length > 0) {
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                drawTexts();
+            };
+            img.src = memeData.images[0].src;
+        } else {
+            // Если нет изображения, рисуем белый фон
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawTexts();
+        }
+    }
+
+    // Отрисовка текстов
+    function drawTexts() {
+        memeData.texts.forEach((textData, index) => {
+            ctx.font = `${textData.fontSize}px ${textData.fontFamily}`;
+            ctx.fillStyle = textData.color;
+            ctx.strokeStyle = textData.strokeColor;
+            ctx.lineWidth = textData.strokeWidth || 3;
+            ctx.textAlign = textData.align || 'center';
+            ctx.textBaseline = 'middle';
+
+            const canvasX = textData.x * canvas.width;
+            const canvasY = textData.y * canvas.height;
+
+            // Подсвечиваем выбранный текст
+            if (index === memeData.currentTextIndex) {
+                ctx.save();
+                ctx.strokeStyle = '#4299e1';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+
+                const metrics = ctx.measureText(textData.text);
+                const textWidth = metrics.width;
+                const textHeight = textData.fontSize;
+
+                ctx.strokeRect(
+                    canvasX - (textData.align === 'center' ? textWidth/2 : textData.align === 'right' ? textWidth : 0) - 5,
+                    canvasY - textHeight/2 - 5,
+                    textWidth + 10,
+                    textHeight + 10
+                );
+                ctx.restore();
+            }
+
+            // Рисуем обводку и заливку текста
+            ctx.strokeText(textData.text, canvasX, canvasY);
+            ctx.fillText(textData.text, canvasX, canvasY);
+        });
+    }
+
+    // Обновление списка текстов
+    function updateTextsList() {
+        textsList.innerHTML = '';
+
+        memeData.texts.forEach((textData, index) => {
+            const textItem = document.createElement('div');
+            textItem.className = 'text-item';
+            if (index === memeData.currentTextIndex) {
+                textItem.classList.add('active');
+            }
+
+            // Создаем безопасный HTML
+            const content = document.createElement('div');
+            content.className = 'text-item-content';
+            content.textContent = textData.text;
+
+            const actions = document.createElement('div');
+            actions.className = 'text-item-actions';
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'text-action-btn';
+            editBtn.innerHTML = '✏️';
+            editBtn.title = 'Редактировать';
+            editBtn.onclick = (e) => {
+                e.stopPropagation();
+                editText(index);
+            };
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'text-action-btn';
+            deleteBtn.innerHTML = '🗑️';
+            deleteBtn.title = 'Удалить';
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteTextItem(index);
+            };
+
+            actions.appendChild(editBtn);
+            actions.appendChild(deleteBtn);
+
+            textItem.appendChild(content);
+            textItem.appendChild(actions);
+
+            textItem.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('text-action-btn')) {
+                    selectText(index);
+                }
+            });
+
+            textsList.appendChild(textItem);
+        });
+
+        updateTextsCount();
+    }
+
+    // Обновление счетчика текстов
+    function updateTextsCount() {
+        textsCount.textContent = memeData.texts.length;
+    }
+
+    // Выбор текста
+    function selectText(index) {
+        memeData.currentTextIndex = index;
+        memeData.editingMode = true;
+
+        const text = memeData.texts[index];
+        textContentInput.value = text.text;
+        fontSelect.value = text.fontFamily;
+        fontSizeSlider.value = text.fontSize;
+        updateFontSizeValue(text.fontSize);
+
+        // Установка цвета текста
+        textColorPicker.querySelectorAll('.color-option').forEach(option => {
+            option.classList.toggle('active', option.dataset.color === text.color);
+        });
+
+        // Установка цвета обводки
+        strokeColorPicker.querySelectorAll('.color-option').forEach(option => {
+            option.classList.toggle('active', option.dataset.color === text.strokeColor);
+        });
+
+        // Установка позиции на кастомную
+        positionSelector.querySelectorAll('.position-btn').forEach(btn => {
+            if (btn.dataset.position === 'custom') {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        openTextEditor();
+        redrawCanvas();
+    }
+
+    // Редактирование текста
+    function editText(index) {
+        selectText(index);
+    }
+
+    // Удаление элемента текста из списка
+    function deleteTextItem(index) {
+        if (confirm('Удалить этот текст?')) {
+            memeData.texts.splice(index, 1);
+            if (memeData.currentTextIndex === index) {
+                memeData.currentTextIndex = -1;
+            } else if (memeData.currentTextIndex > index) {
+                memeData.currentTextIndex--;
+            }
+            redrawCanvas();
+            updateTextsList();
+            updateTextsCount();
+            closeTextEditor();
+        }
+    }
+
+    // Переключение списка текстов
+    function toggleTextsList() {
+        textsListPanel.style.display = textsListPanel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Обработчик клика по холсту
+    canvas.addEventListener('click', function(event) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / canvas.width;
+        const y = (event.clientY - rect.top) / canvas.height;
+
+        if (addTextHint.style.display === 'block') {
+            // Добавление текста в кастомную позицию
+            const text = textContentInput.value.trim();
+            if (!text) {
+                alert('Введите текст перед добавлением!');
+                return;
+            }
+
+            const textColor = textColorPicker.querySelector('.color-option.active').dataset.color;
+            const strokeColor = strokeColorPicker.querySelector('.color-option.active').dataset.color;
+            const fontFamily = fontSelect.value;
+
+            addTextWithData(text, x, y, 'center', currentFontSize, textColor, strokeColor, fontFamily);
+            hideAddTextHint();
+            closeTextEditor();
+        } else {
+            // Проверяем, кликнули ли по существующему тексту
+            let selectedIndex = -1;
+
+            memeData.texts.forEach((textData, index) => {
+                ctx.font = `${textData.fontSize}px ${textData.fontFamily}`;
+                const metrics = ctx.measureText(textData.text);
+                const textWidth = metrics.width;
+                const textHeight = textData.fontSize;
+
+                const canvasX = textData.x * canvas.width;
+                const canvasY = textData.y * canvas.height;
+
+                // Проверяем попадание в область текста
+                const left = canvasX - (textData.align === 'center' ? textWidth/2 : textData.align === 'right' ? textWidth : 0);
+                const right = left + textWidth;
+                const top = canvasY - textHeight/2;
+                const bottom = top + textHeight;
+
+                const clickX = event.clientX - rect.left;
+                const clickY = event.clientY - rect.top;
+
+                if (clickX >= left && clickX <= right && clickY >= top && clickY <= bottom) {
+                    selectedIndex = index;
+                }
+            });
+
+            if (selectedIndex >= 0) {
+                selectText(selectedIndex);
+            } else {
+                // Если клик не по тексту, снимаем выделение
+                memeData.currentTextIndex = -1;
+                redrawCanvas();
+                closeTextEditor();
+            }
+        }
+    });
+
+    // Сохранение мема
+    function saveMeme() {
+        if (memeData.images.length === 0 && !memeData.template) {
+            alert('Пожалуйста, загрузите изображение или выберите шаблон!');
+            return;
+        }
+
+        const imageData = canvas.toDataURL('image/png');
+
+        // Показываем индикатор загрузки
+        const saveButton = document.querySelector('.save-button');
+        const originalText = saveButton.textContent;
+        saveButton.textContent = 'Сохранение...';
+        saveButton.disabled = true;
+
+        fetch('{% url "memes:save_meme_image" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                image_data: imageData,
+                meme_data: memeData
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Мем успешно сохранен!');
+                window.location.href = '{% url "memes:user_memes" %}';
+            } else {
+                alert('Ошибка сохранения: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            alert('Произошла ошибка при сохранении мема');
+        })
+        .finally(() => {
+            saveButton.textContent = originalText;
+            saveButton.disabled = false;
+        });
+    }
+
+    // Вспомогательная функция для получения CSRF токена
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Функция для загрузки изображения
+    function uploadImage() {
+        document.getElementById('image-input').click();
+    }
+
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', initializeEditor);
+</script>
+{% endblock %}

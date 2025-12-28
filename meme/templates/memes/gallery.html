@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8">Галерея шаблонов</h1>
+
+    <!-- Форма фильтрации -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <div class="flex flex-col md:flex-row gap-4">
+            <div class="flex-1">
+                <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Категория:</label>
+                <select id="category" class="w-full p-2 border border-gray-300 rounded">
+                    <option value="all">Все категории</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex-1">
+                <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Поиск:</label>
+                <input type="text" id="search" 
+                       placeholder="Поиск по названию..."
+                       class="w-full p-2 border border-gray-300 rounded">
+            </div>
+            <div class="flex items-end">
+                <button id="search-btn" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded">
+                    Найти
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Контейнер для результатов -->
+    <div id="templates-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {% for template in templates %}
+        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+            <img src="{{ template.image.url }}" alt="{{ template.name }}"
+                 class="w-full h-48 object-cover">
+            <div class="p-4">
+                <h3 class="font-bold text-lg mb-2">{{ template.name }}</h3>
+                <p class="text-gray-600 text-sm mb-4">
+                    Категория: {{ template.category.name }}
+                </p>
+                <a href="{% url 'memes:editor_with_template' template.id %}"
+                   class="block bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded text-sm">
+                    Использовать шаблон
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12">
+            <p class="text-gray-500 text-lg">Шаблоны не найдены.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Элементы DOM
+    const categorySelect = document.getElementById('category');
+    const searchInput = document.getElementById('search');
+    const searchBtn = document.getElementById('search-btn');
+    const templatesContainer = document.getElementById('templates-container');
+    
+    // Установить начальную категорию из Django context
+    {% if selected_category %}
+        categorySelect.value = '{{ selected_category }}';
+    {% endif %}
+    
+    // Установить начальный поисковый запрос
+    {% if search_query %}
+        searchInput.value = '{{ search_query }}';
+    {% endif %}
+    
+    // Обработчики событий
+    searchBtn.addEventListener('click', loadTemplates);
+    categorySelect.addEventListener('change', loadTemplates);
+    
+    // Поиск при нажатии Enter
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            loadTemplates();
+        }
+    });
+    
+    // Дебаунс для поиска при вводе текста
+    let searchTimeout;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(loadTemplates, 500);
+    });
+    
+    // Функция загрузки шаблонов
+    async function loadTemplates() {
+        const category = categorySelect.value;
+        const search = searchInput.value;
+        
+        console.log('Loading templates with category:', category, 'search:', search);
+        
+        // Показать индикатор загрузки
+        templatesContainer.innerHTML = `
+            <div class="col-span-full text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p class="mt-2 text-gray-500">Загрузка шаблонов...</p>
+            </div>
+        `;
+        
+        try {
+            // Формируем URL с параметрами
+            const params = new URLSearchParams();
+            params.append('category', category);
+            if (search) {
+                params.append('q', search);
+            }
+            
+            // Отправляем запрос к API
+            const response = await fetch(`/memes/api/templates/?${params.toString()}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('API response:', data);
+            
+            if (data.success) {
+                renderTemplates(data.templates);
+            } else {
+                throw new Error(data.error || 'Ошибка загрузки данных');
+            }
+            
+        } catch (error) {
+            console.error('Error loading templates:', error);
+            templatesContainer.innerHTML = `
+                <div class="col-span-full text-center py-12">
+                    <div class="text-red-500 mb-2">
+                        <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Ошибка загрузки</h3>
+                    <p class="text-gray-500 mb-4">${error.message}</p>
+                    <button onclick="loadTemplates()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">
+                        Попробовать снова
+                    </button>
+                </div>
+            `;
+        }
+    }
+    
+    // Функция отображения шаблонов
+    function renderTemplates(templates) {
+        if (!templates || templates.length === 0) {
+            templatesContainer.innerHTML = `
+                <div class="col-span-full text-center py-12">
+                    <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Шаблоны не найдены</h3>
+                    <p class="text-gray-500">Попробуйте изменить параметры поиска</p>
+                    <button onclick="resetFilters()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">
+                        Сбросить фильтры
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        templates.forEach(template => {
+            html += `
+                <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow fade-in">
+                    <img src="${template.image_url}" 
+                         alt="${template.name}"
+                         class="w-full h-48 object-cover"
+                         onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200?text=Нет+изображения'">
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg mb-2 truncate" title="${template.name}">${template.name}</h3>
+                        <p class="text-gray-600 text-sm mb-4">
+                            Категория: ${template.category_name}
+                        </p>
+                        <a href="${template.editor_url}"
+                           class="block bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded text-sm transition-colors">
+                            Использовать шаблон
+                        </a>
+                    </div>
+                </div>
+            `;
+        });
+        
+        templatesContainer.innerHTML = html;
+        
+        // Добавляем анимацию появления
+        const items = templatesContainer.querySelectorAll('.fade-in');
+        items.forEach((item, index) => {
+            item.style.animationDelay = `${index * 0.05}s`;
+        });
+    }
+    
+    // Функция сброса фильтров
+    window.resetFilters = function() {
+        categorySelect.value = 'all';
+        searchInput.value = '';
+        loadTemplates();
+    }
+    
+    // Загрузить шаблоны при первой загрузке страницы (если есть параметры фильтрации)
+    {% if selected_category != 'all' or search_query %}
+        loadTemplates();
+        console.log('Category value:', category);
+        console.log('Search value:', search);
+        console.log('API URL:', `/memes/api/templates/?category=${category}&q=${search}`);
+    {% endif %}
+});
+</script>
+
+<style>
+.fade-in {
+    opacity: 0;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}
